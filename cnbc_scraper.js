@@ -1,3 +1,4 @@
+//Simple nodejs snippet to scrape cnbc website for news information
 const request = require('request');
 const iconv  = require('iconv-lite');
 const cheerio=require("cheerio");
