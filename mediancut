@@ -1,0 +1,111 @@
+//This piece of code will extract colour information from picture in rgb format.Then by using Median Cut page can be
+//seperated into 16 pieces with each piece with its own colour
+
+
+const getPixels = require("get-pixels");
+const fs=require("fs");
+
+
+//This Function will load image
+function load(image){
+  return new Promise((resolve,reject)=>{
+    getPixels(image,(err,pixels)=>{
+      if(err){
+        reject(err);
+      };
+      resolve(rgbCreator(pixels));
+    })
+  })
+}
+
+//Will create an array which consists of rgb values of picture
+function rgbCreator(pixels){
+  const width=pixels.shape[0];
+  const height=pixels.shape[1];
+  rgb=[]
+  len=pixels.data.length
+  for (let y=0;y<height;y++){
+    for(let x=0;x<width;x++){
+      const index=(y*width+x)*4;
+      rgb.push({
+        "r":pixels.data[index],
+        "g":pixels.data[index+1],
+        "b":pixels.data[index+2]})
+    }
+  };
+  return rgb;
+}
+
+//this function will compare ranges of red blue and green and will return colour with the biggest range
+function maxRange(rgb){
+  red_min=Number.MAX_SAFE_INTEGER;
+  green_min=Number.MAX_SAFE_INTEGER;
+  blue_min=Number.MAX_SAFE_INTEGER;
+  red_max=Number.MIN_SAFE_INTEGER;
+  green_max=Number.MIN_SAFE_INTEGER;
+  blue_max=Number.MIN_SAFE_INTEGER;
+
+  rgb.forEach(colour=>{
+    red_min=Math.min(red_min,colour["r"]);
+    red_max=Math.max(red_max,colour["r"]);
+    green_min=Math.min(green_min,colour["g"]);
+    green_max=Math.max(green_max,colour["g"]);
+    blue_min=Math.min(blue_min,colour["b"]);
+    blue_max=Math.max(blue_max,colour["b"]);
+  })
+  range=[{"r":red_max-red_min,
+          "g":green_max-green_min,
+          "b":blue_max-blue_min
+}];
+const max_range=Math.max(range[0]["r"],range[0]["g"],range[0]["b"]);
+return getKeyByValue(range[0],max_range)
+}
+
+//After finding colour with the biggest range this function will be used to order array using chosen colour
+function orderRgb(rgb,colour){
+  rgb.sort((a,b)=>{
+    return a[colour]-b[colour]
+  })
+}
+
+function getKeyByValue(object, value) {
+  return Object.keys(object).find(key => object[key] === value);
+}
+
+//This function will split rgb array into 16 pieces
+function splitter(arr,result,sub_length){
+  colour=maxRange(arr);
+  orderRgb(arr,colour)
+  if(arr.length<sub_length){
+    temp={
+      "r":averageCalculator(arr,"r"),
+      "g":averageCalculator(arr,"g"),
+      "b":averageCalculator(arr,"b")
+    };
+    result.push(temp);
+  }else{
+    return [splitter(arr.slice(0,arr.length/2),result,sub_length),splitter(arr.slice(arr.length/2),result,sub_length)];
+  }
+}
+
+function averageCalculator(arr,colour){
+  sum=0;
+  for (i in arr){
+    sum+=arr[i][colour];
+  }
+  return Math.ceil(sum/arr.length);
+}
+
+
+async function MedianCut(){
+
+  //Load image and create rgb array
+  let rgb=await load("tree.jpg");
+  sub_length=rgb.length/8
+  result=[]
+  //split it into pieces
+  splitter(rgb,result,sub_length);
+  console.log(result);
+}
+
+MedianCut();
